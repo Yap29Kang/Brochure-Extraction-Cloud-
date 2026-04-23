@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from datetime import datetime
 import shutil, os, json, re
 import subprocess
-
-from run_pipeline import process_single_pdf
+import sys
+import uvicorn
 
 app = FastAPI()
 
@@ -63,6 +63,9 @@ def root():
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     try:
+        # Lazy import to keep API startup fast so the server can bind the port quickly.
+        from run_pipeline import process_single_pdf
+
         os.makedirs("temp", exist_ok=True)
         path = f"temp/{file.filename}"
 
@@ -106,7 +109,7 @@ def save_draft(payload: MetaPayload):
 def autofill_form(payload: MetaPayload):
     subprocess.Popen(
         [
-            "python",
+            sys.executable,
             "autofill.py",  
             json.dumps(payload.meta)
         ],
@@ -114,6 +117,11 @@ def autofill_form(payload: MetaPayload):
     )
 
     return {"status": "autofill_started"}
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "10000"))
+    uvicorn.run("api:app", host="0.0.0.0", port=port)
 
 
 

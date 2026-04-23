@@ -17,4 +17,4 @@ WORKDIR /app/backend
 EXPOSE 10000
 
 # Start your FastAPI app
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-10000}"]
