@@ -15,10 +15,36 @@ app = FastAPI()
 class MetaPayload(BaseModel):
     meta: dict
 
+
+def _normalize_origin(value: str) -> str:
+    return value.strip().rstrip("/")
+
+
+def _get_allowed_origins() -> list[str]:
+    # Comma-separated origins from env, e.g. "https://a.vercel.app,https://b.vercel.app"
+    env_origins = os.getenv("FRONTEND_ORIGINS", "")
+    parsed = [_normalize_origin(v) for v in env_origins.split(",") if v.strip()]
+
+    defaults = [
+        "http://localhost:5173",
+        "https://keyword-extraction-and-automation.vercel.app",
+        "https://text-extraction-from-brochure.vercel.app",
+    ]
+    merged = parsed + defaults
+
+    # Keep order and remove duplicates.
+    seen = set()
+    unique = []
+    for origin in merged:
+        if origin not in seen:
+            unique.append(origin)
+            seen.add(origin)
+    return unique
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://keyword-extraction-and-automation.vercel.app", "https://text-extraction-from-brochure.vercel.app"],
+    allow_origins=_get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

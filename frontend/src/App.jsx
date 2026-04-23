@@ -1,10 +1,15 @@
 import { useState } from "react";
 import "./App.css";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 // Upload Helper
 async function uploadFile(file, setResult, setLoading) {
+  if (!API_BASE) {
+    alert("Missing VITE_API_URL. Please set it in Vercel environment variables.");
+    return;
+  }
+
   setLoading(true);
 
   const formData = new FormData();
@@ -24,7 +29,7 @@ async function uploadFile(file, setResult, setLoading) {
     const data = await res.json();
     setResult(data);
   } catch (err) {
-    alert("Upload failed");
+    alert(`Upload failed: ${err?.message || "Unknown error"}`);
     console.error(err);
   } finally {
     setLoading(false);
