@@ -69,11 +69,17 @@ async def upload(file: UploadFile = File(...)):
         with open(path, "wb") as f:
             shutil.copyfileobj(file.file, f)
 
-        return process_single_pdf(path)
+        print(f"[Upload] Starting processing for {file.filename}")
+        result = process_single_pdf(path)
+        print(f"[Upload] Success for {file.filename}")
+        return result
 
     except Exception as e:
+        error_msg = str(e)
+        error_type = type(e).__name__
+        print(f"[Upload] ERROR for {file.filename}: {error_type}: {error_msg}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"{error_type}: {error_msg}")
 
 # Save Draft
 @app.post("/draft")

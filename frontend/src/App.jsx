@@ -22,14 +22,22 @@ async function uploadFile(file, setResult, setLoading) {
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
+      let errorDetail = "Server error";
+      try {
+        const errorJson = await res.json();
+        errorDetail = errorJson.detail || JSON.stringify(errorJson);
+      } catch {
+        const text = await res.text();
+        errorDetail = text || `HTTP ${res.status}`;
+      }
+      throw new Error(errorDetail);
     }
 
     const data = await res.json();
     setResult(data);
   } catch (err) {
-    alert(`Upload failed: ${err?.message || "Unknown error"}`);
+    const errorMsg = err?.message || "Unknown error";
+    alert(`Upload failed:\n${errorMsg}`);
     console.error(err);
   } finally {
     setLoading(false);
