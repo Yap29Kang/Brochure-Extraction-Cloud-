@@ -3,7 +3,45 @@ import json
 import re
 import google.generativeai as genai
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+_GEMINI_CONFIGURED = False
+
+
+def _read_api_key_from_dotenv() -> str | None:
+    """Read GOOGLE_API_KEY from backend/.env when process env is not populated."""
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    if not os.path.exists(env_path):
+        return None
+
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if not line.startswith("GOOGLE_API_KEY="):
+                    continue
+
+                _, value = line.split("=", 1)
+                value = value.strip().strip('"').strip("'")
+                return value or None
+    except Exception:
+        return None
+
+    return None
+
+
+def _ensure_gemini_configured() -> bool:
+    global _GEMINI_CONFIGURED
+    if _GEMINI_CONFIGURED:
+        return True
+
+    api_key = os.getenv("GOOGLE_API_KEY") or _read_api_key_from_dotenv()
+    if not api_key:
+        return False
+
+    genai.configure(api_key=api_key)
+    _GEMINI_CONFIGURED = True
+    return True
 
 # ORGANISER NORMALISATION
 def normalize_organiser(name: str) -> str:
@@ -45,6 +83,13 @@ def gemini_fallback(meta, text):
         "Trainer Confidence",
         "Organiser Confidence"
     ]):
+        return meta
+
+    if not _ensure_gemini_configured():
+        if "Flags" in meta:
+            meta["Flags"] += ";GEMINI_SKIPPED_NO_API_KEY"
+        else:
+            meta["Flags"] = "GEMINI_SKIPPED_NO_API_KEY"
         return meta
 
     prompt = f"""
