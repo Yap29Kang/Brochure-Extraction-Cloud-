@@ -1,0 +1,12 @@
+{
+  "name": "text-extraction-backend",
+  "version": "1.0.0",
+  "description": "Backend API for brochure text extraction",
+  "private": true,
+  "scripts": {
+    "start": "echo 'Backend is Python-based; use python -m api or run_pipeline.py'",
+    "test": "echo 'No JS tests configured'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

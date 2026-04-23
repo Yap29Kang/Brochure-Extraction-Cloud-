@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+python-multipart
+pandas
+
+pymupdf
+pdfplumber
+pillow
+imagehash
+pytesseract
+python-docx
+google-generativeai
+
+numpy
+rank-bm25
+sentence-transformers
