@@ -1,4 +1,6 @@
 from typing import List, Dict
+from functools import lru_cache
+import os
 import re
 import numpy as np
 
@@ -26,10 +28,17 @@ def cosine(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / denom)
 
 
+@lru_cache(maxsize=1)
+def _get_sentence_model(model_name: str) -> SentenceTransformer:
+    return SentenceTransformer(model_name)
+
+
 class CategoryIndex:
     def __init__(self, categories: List[Category], model_name: str = "all-MiniLM-L6-v2"):
         self.categories = categories
-        self.model = SentenceTransformer(model_name)
+        # USE_EMBEDDINGS=0 enables a lower-memory BM25-only retrieval mode.
+        self.use_embeddings = os.getenv("USE_EMBEDDINGS", "1").strip().lower() not in {"0", "false", "no"}
+        self.model = _get_sentence_model(model_name) if self.use_embeddings else None
 
         # BM25 corpus
         self.cat_blobs = [c.blob for c in categories]
@@ -37,7 +46,11 @@ class CategoryIndex:
         self.bm25 = BM25Okapi(self.cat_tokens)
 
         # Embeddings
-        self.cat_vecs = self.model.encode(self.cat_blobs, normalize_embeddings=True)
+        self.cat_vecs = (
+            self.model.encode(self.cat_blobs, normalize_embeddings=True)
+            if self.use_embeddings
+            else None
+        )
 
     def retrieve_topk(self, brochure_text: str, k: int = 5, bm25_pool: int = 40, sim_pool: int = 60) -> List[Dict]:
         """
@@ -52,13 +65,17 @@ class CategoryIndex:
         # BM25 pool
         bm25_idx = np.argsort(-bm25_scores)[:min(bm25_pool, len(self.categories))]
 
-        # Embedding pool
-        bro_vec = self.model.encode([brochure_text], normalize_embeddings=True)[0]
-        sims_all = np.array([cosine(bro_vec, v) for v in self.cat_vecs], dtype=float)
-        sim_idx = np.argsort(-sims_all)[:min(sim_pool, len(self.categories))]
+        if self.use_embeddings and self.model is not None and self.cat_vecs is not None:
+            # Embedding pool
+            bro_vec = self.model.encode([brochure_text], normalize_embeddings=True)[0]
+            sims_all = np.array([cosine(bro_vec, v) for v in self.cat_vecs], dtype=float)
+            sim_idx = np.argsort(-sims_all)[:min(sim_pool, len(self.categories))]
 
-        # UNION pool
-        pool_idx = np.array(sorted(set(bm25_idx.tolist()) | set(sim_idx.tolist())), dtype=int)
+            # UNION pool
+            pool_idx = np.array(sorted(set(bm25_idx.tolist()) | set(sim_idx.tolist())), dtype=int)
+        else:
+            sims_all = np.zeros(len(self.categories), dtype=float)
+            pool_idx = np.array(bm25_idx, dtype=int)
 
         # Normalize BM25 within pool
         pool_bm25 = bm25_scores[pool_idx]
@@ -66,8 +83,8 @@ class CategoryIndex:
 
         pool_sims = sims_all[pool_idx]
 
-        # Mostly semantic
-        combo = 0.15 * pool_bm25_norm + 0.85 * pool_sims
+        # Mostly semantic when embeddings are enabled; pure BM25 in low-memory mode.
+        combo = (0.15 * pool_bm25_norm + 0.85 * pool_sims) if self.use_embeddings else pool_bm25_norm
 
         order = np.argsort(-combo)[:k]
         out = []

@@ -1,10 +1,28 @@
 # category_classification/__init__.py
 from typing import Dict, Tuple
+from functools import lru_cache
+from pathlib import Path
 
 from .category_loader import load_categories_from_docx
 from .brochure_representation import build_weighted_brochure_text
 from .category_index import CategoryIndex
 from .threshold import compute_confidence
+
+
+@lru_cache(maxsize=2)
+def _get_category_index(docx_path: str) -> CategoryIndex:
+    categories = load_categories_from_docx(docx_path)
+    return CategoryIndex(categories)
+
+
+def _resolve_docx_path(docx_path: str) -> str:
+    path = Path(docx_path)
+    if path.is_absolute():
+        return str(path)
+
+    # Resolve relative to backend/ where this package lives.
+    backend_root = Path(__file__).resolve().parent.parent
+    return str((backend_root / path).resolve())
 
 def classify_brochure_category(
     meta: Dict,
@@ -20,9 +38,9 @@ def classify_brochure_category(
     2. Computes a confidence score.
     3. If confidence is Low/Medium and use_gemini is True, falls back to Gemini for reranking.
     """
-    # 1. Load data and build index
-    categories = load_categories_from_docx(docx_path)
-    index = CategoryIndex(categories)
+    # 1. Load data and build index (cached across requests)
+    resolved_docx_path = _resolve_docx_path(docx_path)
+    index = _get_category_index(resolved_docx_path)
 
     # 2. Pre-process text (Applying the 3x title boost and 2x agenda boost)
     weighted_text = build_weighted_brochure_text(meta, brochure_text)
