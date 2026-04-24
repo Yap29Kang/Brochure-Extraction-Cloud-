@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: brochure-extraction-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
