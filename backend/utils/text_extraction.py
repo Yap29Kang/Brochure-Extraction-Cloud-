@@ -45,21 +45,24 @@ def extract_text_with_fallback(pdf_path):
         method ("TEXT" | "OCR" | "MIXED")
     """
 
-    text_chunks = []
-
     # --------------------------------------------------
     # 1. PyMuPDF extraction
     # --------------------------------------------------
+    text_chunks = []
     try:
-        doc = fitz.open(pdf_path)
-        for page in doc:
-            page_text = page.get_text()
-            if page_text:
-                text_chunks.append(page_text)
+        with fitz.open(pdf_path) as doc:
+            for page in doc:
+                page_text = page.get_text()
+                if page_text:
+                    text_chunks.append(page_text)
     except Exception as e:
         print(f"[ERROR] PyMuPDF failed: {e}")
 
     text_pymupdf = "\n".join(text_chunks).strip()
+
+    # If PyMuPDF already extracted enough text, avoid the second native pass.
+    if len(text_pymupdf) >= TEXT_LENGTH_THRESHOLD:
+        return text_pymupdf, "TEXT"
 
     # --------------------------------------------------
     # 2. pdfplumber extraction
