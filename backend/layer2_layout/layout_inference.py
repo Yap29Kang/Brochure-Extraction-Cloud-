@@ -197,7 +197,7 @@ def get_page_image(pdf_path, page_number=0, dpi=200):
     img_bytes = pix.tobytes("png")
     doc.close()
 
-    img = Image.open(io.BytesIO(img_bytes))
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     return img.convert("RGBA")
 
 def ocr_image_region(image):

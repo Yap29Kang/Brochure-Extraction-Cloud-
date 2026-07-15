@@ -16,7 +16,7 @@ def _get_ref_hash():
     global _REF_HASH
 
     if _REF_HASH is None:
-        ref_img = Image.open(HRDC_LOGO_PATH).convert("RGB")
+        ref_img = Image.open(HRDC_LOGO_PATH).convert("RGBA")
         _REF_HASH = imagehash.phash(ref_img)
 
     return _REF_HASH
@@ -37,7 +37,7 @@ def detect_hrdc_logo(pdf_path):
                 image_bytes = base["image"]
 
                 try:
-                    img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                    img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
                     img_hash = imagehash.phash(img_pil)
                     distance = abs(ref_hash - img_hash)
 

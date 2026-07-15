@@ -1,7 +1,8 @@
 import os
 import json
 import re
-import google.generativeai as genai
+
+genai = None
 
 _GEMINI_CONFIGURED = False
 
@@ -31,9 +32,13 @@ def _read_api_key_from_dotenv() -> str | None:
 
 
 def _ensure_gemini_configured() -> bool:
-    global _GEMINI_CONFIGURED
+    global _GEMINI_CONFIGURED, genai
     if _GEMINI_CONFIGURED:
         return True
+
+    if genai is None:
+        import google.generativeai as genai_module
+        genai = genai_module
 
     api_key = os.getenv("GOOGLE_API_KEY") or _read_api_key_from_dotenv()
     if not api_key:

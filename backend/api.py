@@ -7,6 +7,7 @@ import shutil, os, json, re
 import subprocess
 import sys
 import uvicorn
+from fastapi.responses import Response
 
 app = FastAPI()
 
@@ -57,6 +58,16 @@ def root():
         "status": "ok",
         "service": "Keyword Extraction & Automation API"
     }
+
+
+@app.head("/")
+def root_head():
+    return Response(status_code=200)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 # Upload PDF
